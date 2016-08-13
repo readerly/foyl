@@ -1,0 +1,1197 @@
+﻿script "foyl-sample-script.lc"
+global gDatabaseID
+global gType
+global gList
+global gItemID
+global gTest
+global gSessionID
+global gSessionLog
+global gUserAction
+global gRecording
+global gAnswerTime
+global gPracticeQuestions
+global gPlayAnimation
+global gLine
+global gRecordingID
+// global gRecordingsList
+global gVideo
+global gVideoFile
+global gLooping
+global gPlaying
+global gLink
+global gSessionNumber
+global gLoopFile
+global gCard
+
+/*
+constant ftphost = "ftp.gmurquhart.com/foyl/"
+constant ftpuser = "foyl@gmurquhart.com"
+constant ftppass = "Blue99Beard$"
+*/
+
+on preOpenStack
+   
+    set the fullscreenmode of me to "showAll"
+    // set the acceleratedRendering of this stack to true
+      
+    databaseConnect
+    
+end preOpenStack
+
+on openStack
+   
+   if the environment is "development" then
+      set the height of stack "Foyl" to 1136
+      set the location of stack "Foyl" to 1573,705
+   end if
+   
+   set the visible of group "settings" of card "main" to false
+   set the visible of group "border" to true
+   set the dgProp["hilite color"] of group "recordingsList" of card "practice" to "#5A769B"
+   set the dgProp["hilite color"] of group "reviewList" of card "list" to "#5A769B"
+         
+   put empty into gSessionLog
+   put empty into gUserAction
+   put true into gPlayAnimation
+   set the mgSwitchedOn of group "animationSwitch" of card "main" to true
+   put "Foyl is working" into field "animationSettingLabel" of card "main"
+   set the htmlText of field "tabcenter" of card "main" to "<font color='#5A769B'>fo</font><font color='#A24E4C'>y</font><font color='#5A769B'>l</font>"
+   
+   generateSessionID
+   
+   if the environment is "mobile" then
+   put specialFolderPath("documents") & "/SessionNumber.txt" into tFilePath
+   put URL("file:" & tFilePath) into gSessionNumber
+   add 1 to gSessionNumber
+   end if
+   
+   loadSavedRecordings
+   
+   // send "postSessionLog" to me in 60 seconds
+   // send "postSessionLog" to me in 120 seconds
+   // send "postSessionLog" to me in 240 seconds
+   // send "postSessionLog" to me in 480 seconds
+   
+   put "Open app" into gUserAction
+   logUserAction
+   
+   go to card "start"
+   set the htmlText of field "title" of card "start" to "<font color='#5A769B'>fo</font><font color='#A24E4C'>y</font><font color='#5A769B'>l</font>"
+
+   showNavButtons
+    setToMain
+    setButtonColors
+    
+   repeat with tSequence = 1 to 4
+      put empty into field ("button" & tSequence)
+   end repeat
+      
+     if gSessionNumber is 1 then
+        put "greet1" into gVideoFile
+   else
+      put "greet2" into gVideoFile
+   end if
+   // put false into gLooping
+   put "alertloop" into gLoopFile
+   
+   set the visible of group "foylFrame" to true
+   
+   // if the environment is "mobile" then
+      playVideo
+      // end if
+
+end openStack
+
+on loadSavedRecordings
+   go to card "practice"
+   set the dgData of group "recordingsList" of card "practice" to empty
+      set itemDel to tab
+   put specialFolderPath("documents") & "/RecordingsList.txt" into tFilePath
+   put URL("file:" & tFilePath) into tList
+      
+   repeat with x = the number of lines of tList down to 1
+      put item 3 of line x of tList into tRecordings["question"]
+      put item 1 of line x of tList into tRecordings["date"]
+      put item 4 of line x of tList into tRecordings["time"]
+      put item 2 of line x of tList into tRecordings["id"]
+      put 1 into tLineNumber
+      dispatch "AddData" to group "recordingsList" of card "practice" with tRecordings, tLineNumber
+   end repeat
+   
+   // set the dgData of group "recordingsList" of card "practice" to tRecordings
+
+end loadSavedRecordings
+
+/*
+on closeStackRequest
+   if the environment is "mobile" then
+   put urlEncode("Foyl user") into tName
+      put urlEncode("foyluser@ivyleagueedge.com") into tEmail
+      put urlEncode("User log") into tSubject
+      put "Session number" && gSessionNumber & return before gSessionLog
+      put "g15-name=" & tName & "&g15-email=" & tEmail & "&g15-subject=" & tSubject & "&g15-yourmessage=" & urlEncode(gSessionLog) & "&contact-form-id=15&action=grunion-contact-form" into tArgList
+      post tArgList to URL "http://ivyleagueedge.com/contact/#contact-form-15"
+      pass closeStackRequest
+      end if
+end closeStackRequest
+*/
+
+on postSessionLog
+   if the environment is "mobile" then
+   put urlEncode("Foyl user") into tName
+      put urlEncode("foyluser@ivyleagueedge.com") into tEmail
+      put urlEncode("User log") into tSubject
+      put "Session number" && gSessionNumber & return before gSessionLog
+      // answer gSessionLog
+      put "g15-name=" & tName & "&g15-email=" & tEmail & "&g15-subject=" & tSubject & "&g15-yourmessage=" & urlEncode(gSessionLog) & "&contact-form-id=15&action=grunion-contact-form" into tArgList
+      post tArgList to URL "http://info.readerlyapp.com/contact/#contact-form-15"
+      end if
+end postSessionLog
+
+on closeStack
+   if the environment is "mobile" then
+      
+      set itemDel to tab
+      put the dgText of group "recordingsList" of card "practice" into tList
+      put specialFolderPath("documents") & "/RecordingsList.txt" into tFilePath
+      put tList into URL("file:" & tFilePath)
+      
+      put specialFolderPath("documents") & "/SessionNumber.txt" into tFilePath
+      put gSessionNumber into URL("file:" & tFilePath)
+      
+      // put the dgData of group "recordingsList" of card "practice" into tDataArray
+      // put specialFolderPath("documents") & "/RecordingsList.txt" into tFilePath
+      // put arrayEncode(tDataArray) into URL("file:" & tFilePath)
+      
+      // set itemDel to tab
+      // put field "savedRecordings" of card "practice" into tRecordingsList
+      // put specialFolderPath("documents") & "/RecordingsList.txt" into tFile
+      // put tRecordingsList into URL("file:" & tFile)
+   
+      // put specialFolderPath("documents") & slash & gSessionID & ".txt" into tLogFile
+      // put gSessionLog into URL("file:" & tLogFile)
+   
+end if
+end closeStack
+
+on databaseConnect
+    
+   if the environment is "mobile" then
+      put specialFolderPath("engine") & "/foyl01.sqlite" into tDatabasePath
+      else
+      put specialFolderPath("documents") & "/foyl01.sqlite" into tDatabasePath
+end if
+   
+   put revOpenDatabase("sqlite",tDatabasePath, , , , 0) into tDatabaseID
+   setDatabaseID tDatabaseID
+end databaseConnect
+   
+on setDatabaseID pDatabaseID
+   put pDatabaseID into gDatabaseID
+end setDatabaseID
+
+function getDatabaseID
+   return gDatabaseID
+end getDatabaseID
+
+on hideNavButtons
+   repeat with tSequence = 1 to 4
+      set the visible of group ("button" & tSequence) to false
+   end repeat
+end hideNavButtons
+
+on showNavButtons
+   repeat with tSequence = 1 to 4
+      set the visible of group ("button" & tSequence) to true
+   end repeat
+end showNavButtons
+
+on goToStart
+   // set the visible of group "video" to true
+   showNavButtons
+   repeat with tSequence = 1 to 4
+      put empty into field ("button" & tSequence)
+   end repeat
+   go to card "start"
+end goToStart
+
+on setToMain
+   put "Main" into field "mgcLabel" of group "tableft" of card "main"
+   set the visible of group "tabright" to false
+end setToMain
+
+on goToMain
+   // deleteVideoPlayer
+
+   // set the visible of group "foylFrame" to true
+   // set the visible of group "video" to true
+   set the visible of group "button1" to true
+   // set the backgroundColor of group "button4" to "#A24E4C"
+   set the visible of group "button2" to true
+   set the visible of group "button3" to true
+   set the visible of group "button4" to false
+   set the visible of group "settings" of card "main" to false
+   set the visible of field "prompt" of card "practice" to false
+   set the visible of field "mainHeader" of card "main" to false
+   set the visible of group "tabright" to false
+   set the visible of group "share" of card "main" to false
+   set the visible of group "border" of card "main" to true
+   put "Prepare" into field "button1"
+   put "Practice" into field "button2"
+   put "Share" into field "button3"
+   put "More Free Stuff" into field "button4"
+   put "Extras" into field "mgcLabel" of group "tableft"
+      go to card "main"
+   // if gVideoFile is not "naploop" then
+   put "main" into gVideoFile
+   // put false into gLooping
+   put "alertloop" into gLoopFile
+   playVideo
+   // end if
+end goToMain
+
+on goToPrepare
+   set the visible of group "foylFrame" to true
+   go to card "main"
+   put empty into field "mainHeader" of card "main"
+   showNavButtons
+      set the visible of group "share" of card "main" to false
+      // put "Prepare" into gUserAction
+      put "Do's & Don'ts" into field "button1"
+      put "Sample Questions" into field "button2"
+      put "Horror Stories" into field "button3"
+      put "Pep Talks" into field "button4"
+      setToMain
+      put "alertloop" into gLoopFile
+      playLoop
+end goToPrepare
+
+on goToQuestionCategories
+   set the visible of group "foylFrame" to true
+   go to card "main"
+         put "questions" into gCard
+         put "Sample Questions" into gUserAction
+         showNavButtons
+         put "Personality" into field "button1"
+         put "Interests" into field "button2"
+         put "High School" into field "button3"
+         put "College" into field "button4"
+       put "Back" into field "mgcLabel" of group "tableft"
+   set the visible of group "tabright" to false
+         put "alertloop" into gLoopFile
+         playLoop
+end goToQuestionCategories
+
+on goToDoDont
+   set the visible of group "foylFrame" to true
+   go to card "main"
+         put "dodont" into gCard
+         put "Do's & Don'ts" into gUserAction
+         set the visible of group "button1" to true
+         set the visible of group "button2" to true
+     set the visible of group "button3" to false
+     set the visible of group "button4" to false
+      put "Do's" into field "button1"
+      put "Don'ts" into field "button2"
+      put "Back" into field "mgcLabel" of group "tableft" of card "main"
+      set the visible of group "tabright" to false
+      put "alertloop" into gLoopFile
+      playLoop
+end goToDoDont
+
+on goToList
+      // saveNote
+    set the vScrollbar of group "listGroup" of card "list" to false
+    
+      if the environment is "mobile" then
+           // deleteVideoPlayer
+      else
+         set the visible of group "video" to true
+         set the visible of player "player" to true
+      end if
+      
+      go to card "list"
+      // put "main" into gCard
+      set the dgText[true] of group "reviewList" of card "list" to empty
+      // set the rect of group "reviewList" of card "list" to the rect of group "listGroup" of card "list"
+      set the vScroll of group "listGroup" of card "list" to 0
+      set the vScroll of group "reviewList" of card "list" to 0
+   
+   set itemDel to tab
+   put getDatabaseID() into tDatabaseID
+   put "SELECT id,header FROM content WHERE type = ' " & gType & "' ORDER BY sequence ASC" into tSQL
+   put revDataFromQuery(tab,return,tDatabaseID,tSQL) into tList
+   put "id" & tab & "item" & cr before tList
+   put tList into gList
+   set the dgText[true] of group "reviewList" of card "list" to tList
+   
+   // set the dgProp["hilite color"] of group "reviewList" of card "list" to "#5A769B"
+   
+   set the height of group "reviewList" of card "list" to the dgFormattedHeight of group "reviewList" of card "list"
+   // put the dgFormattedHeight of group "reviewList" of card "list" into tGridHeight
+   // set the top of group "reviewList" of card "list" to the top of group "listGroup" of card "list"
+   set the showBorder of group "reviewList" to false
+         
+   if tGridHeight > the height of group "listGroup" of card "list" then
+      if the environment is "mobile" then
+         mobileControlCreate "scroller", "listScroller"
+          put the rect of group "listGroup" of card "list" into tListGroupRect
+          mobileControlSet "listScroller", "rect", tListGroupRect
+          put the rect of group "reviewList" of card "list" into tListRect
+          mobileControlSet "listScroller", "contentRect", tListRect
+          mobileControlSet "listScroller", "visible", true
+          mobileControlSet "listScroller", "scrollingEnabled", true
+          mobileControlSet "listScroller", "opaque", false
+          mobileControlSet "listScroller", "vIndicator", true
+          mobileControlSet "listScroller", "canBounce", true
+          mobileControlSet "listScroller", "delayTouches", true
+          mobileControlSet "listScroller", "vScroll", "0"
+      else
+           set the vScrollbar of group "listGroup" of card "list" to true
+         set the vScroll of group "listGroup" of card "list" to 0
+            end if
+         else
+            set the vScroll of group "listGroup" of card "list" to 0
+               set the vScrollbar of group "listGroup" of card "list" to false
+end if
+        
+   hideNavButtons
+   // setToMain
+   put "Back" into field "mgcLabel" of group "tableft"
+   set the visible of group "tabright" to false
+   // answer gList
+   playVideo
+end goToList
+
+on goToItem 
+   go to card "item"
+   
+   if the environment is "mobile" then
+      mobileControlSet "itemNote", "visible", false
+   else
+      set the visible of group "video" to true
+      set the visible of player "player" to true
+      set the visible of group "itemNote" of card "item" to false
+   end if
+   
+   set the vScrollbar of group "itemTextGroup" of card "item" to false
+   set the vScroll of group "itemTextGroup" of card "item" to 0
+   set the vScroll of field "itemText" of card "item" to 0
+
+   put "Note" into field "mgcLabel" of group "tabright"
+   put "Back" into field "mgcLabel" of group "tableft"
+
+   put "list" into gCard
+   
+   put empty into field "itemText" of card "item"
+   set the rect of field "itemText" of card "item" to the rect of group "itemTextGroup" of card "item"
+   
+   set itemDel to tab
+   put getDatabaseID() into tDatabaseID
+   put "SELECT body FROM content WHERE id = ' " & gItemID & "'" into tSQL
+   put revDataFromQuery(tab,return,tDatabaseID,tSQL) into tBody
+   replace "--" with "&mdash;" in tBody
+   replace space & space with space in tBody
+   replace "'" with "&#8217;" in tBody
+   replace space & quote with space & "&#8220;" in tBody
+   replace quote & space with "&#8221;" & space in tBody
+   replace ">" & quote with ">" & "&#8220;" in tBody
+   replace "</p>" with "</p><br />" in tBody
+   replace quote & "<" with "&#8221;" & "<" in tBody
+   
+   // answer tBody
+          
+   set the htmlText of field "itemText" of card "item" to tBody
+   
+   set the height of field "itemText" of card "item" to the formattedHeight of field "itemText" of card "item"   
+   
+   // set the top of field "itemText" of card "item" to the top of group "itemTextGroup" of card "item"
+   // set the bottom of field "itemText" of card "item" to (the formattedHeight of field "itemText" of card "item" + 494)
+   // put (the formattedHeight of field "itemText" of card "item" + the top of group "itemTextGroup" of card "item") into tTextHeight   
+   // set the bottom of field "itemText" of card "item" to tTextHeight
+
+   
+   hideNavButtons
+   // setToMain
+   set the visible of group "tabright" to true
+   // focus on nothing
+   
+      if field "itemTitle" of card "item" = "Pretentious." then
+      put "boredloop" into gLoopFile
+      put gLoopFile into gVideoFile
+      // put true into gLooping
+   else
+      if gType = 4 then
+         put "boredloop" into gLoopFile
+      put gLoopFile into gVideoFile
+      // put true into gLooping
+else
+   put "clip" & gItemID into gVideoFile
+   // put false into gLooping
+end if
+end if
+playVideo
+   
+   if the formattedHeight of field "itemText" of card "item" < the height of group "itemTextGroup" of card "item" then
+    
+      if the environment is "mobile" then
+         // mobileControlSet "itemNote", "visible", false
+         // mobileControlSet "avatarPlayer", "visible", true
+      else
+         set the visible of group "itemNote" to false
+         set the visible of group "video" to true
+            set the vScroll of group "itemTextGroup" of card "item" to 0
+         set the vScrollbar of group "itemTextGroup" of card "item" to false
+       end if
+    else
+       if the environment is "mobile" then
+          // set the layerMode of field "itemText" to "scrolling"
+          set the vScrollbar of group "itemTextGroup" of card "item" to false
+          // mobileControlSet "itemNote", "visible", false
+          // mobileControlSet "avatarPlayer", "visible", true
+          // wait 1 second with messages
+          
+          mobileControlCreate "scroller", "itemTextScroller"
+          put the rect of group "itemTextGroup" of card "item" into tTextGroupRect
+          mobileControlSet "itemTextScroller", "rect", tTextGroupRect
+          
+         put the rect of field "itemText" of card "item" into tTextRect
+          
+          mobileControlSet "itemTextScroller", "contentRect", tTextRect
+          // mobileControlSet "itemTextScroller", "visible", true
+          mobileControlSet "itemTextScroller", "scrollingEnabled", true
+          mobileControlSet "itemTextScroller", "opaque", true
+          mobileControlSet "itemTextScroller", "vIndicator", true
+          mobileControlSet "itemTextScroller", "canBounce", true
+          mobileControlSet "itemTextScroller", "delayTouches", true
+          mobileControlSet "itemTextScroller", "vScroll", "0"
+          mobileControlSet "itemTextScroller", "visible", true
+      else
+         set the visible of group "video" to true
+         set the visible of group "itemNote" of card "item" to false
+         set the visible of group "itemTextGroup" of card "item" to true
+   set the vScrollbar of group "itemTextGroup" of card "item" to true
+   set the vScroll of group "itemTextGroup" of card "item" to 0
+      end if
+end if
+ 
+end goToItem
+
+on scrollerDidScroll hOffset, vOffset
+   // When the user scrolls move the displayed content
+   if mobileControlTarget() is "itemTextScroller" then
+      set the vScroll of group "itemTextGroup" of card "item" to vOffset
+   else if mobileControlTarget() is "listScroller" then
+      set the vScroll of group "listGroup" of card "list" to vOffset
+      end if
+end scrollerDidScroll
+
+on loadNextItem
+   set itemDel to tab
+      put the number of lines of gList into tSequence
+      repeat with x = 1 to tSequence
+         if item 1 of line x of gList = gItemID then
+            if x = tSequence then
+               put item 1 of line 2 of gList into gItemID
+               exit repeat
+               else
+                  put item 1 of line (x + 1) of gList into gItemID
+                  exit repeat
+                  end if
+       end if
+   end repeat
+end loadNextItem
+
+on loadPreviousItem
+   set itemDel to tab
+      put the number of lines of gList into tSequence
+      repeat with x = 1 to tSequence
+         if item 1 of line x of gList = gItemID then
+            if x = 2 then
+               put item 1 of line tSequence of gList into gItemID
+               exit repeat
+               else
+                  put item 1 of line (x - 1) of gList into gItemID
+                  exit repeat
+                  end if
+       end if
+   end repeat
+ end loadPreviousItem
+
+ on goToLobby
+    go to card "main"
+   set the visible of group "button1" to true
+   set the visible of group "button2" to true
+   set the visible of group "button3" to false
+   set the visible of group "button4" to false
+   set the visible of field "mainHeader" of card "main" to true
+   set the visible of field "prompt" of card "practice" to false
+   set the visible of group "recordingLevel" of card "practice" to false
+   // set the visible of group "recordingsList" of card "practice" to false
+   set the visible of group "recordingsGroup" of card "practice" to false
+   set the visible of group "tabright" to true
+   set the visible of group "border" to true
+   put "Saved Answers" into field "mgcLabel" of group "tabright"
+   put "Main" into field "mgcLabel" of group "tableft"
+   put "What would you like to practice?" into field "mainHeader" of card "main"
+   put "Answer random question" into field "button1"
+   put "Mini-interview" into field "button2"
+   // if gVideoFile is not "naploop" then
+   // put "practice" into gVideoFile
+   // put false into gLooping
+   // put "alertloop" into gLoopFile
+   // end if
+   playVideo
+end goToLobby
+
+on goToPractice
+   // deleteVideoPlayer
+   go to card "practice"
+   // hideNavButtons
+   set the visible of group "tabright" to true
+   set the visible of field "prompt" of card "practice" to true
+   put "Back" into field "mgcLabel" of group "tableft"
+   put "Saved Answers" into field "mgcLabel" of group "tabright"
+   set the visible of group "button1" to true
+   set the visible of group "button2" to false
+   set the textSize of field "prompt" to 28
+   put "practice" into gCard
+   // set the textAlign of field "button1" to center
+   // set the rect of field "button1" to (0,604,640,664)
+   put "Record" into field "button1"
+   
+   // set the visible of group "recordingsList" of card "practice" to false
+   set the visible of group "recordingsGroup" of card "practice" to false
+   
+   put empty into gRecording
+         
+   // answer gRecordingsList
+   
+   /*
+   if gRecordingsList is not empty then
+            // set the dgData of group "recordingsList" of card "practice" to empty
+      set itemDel to tab
+              repeat for each line tLine in gRecordingsList
+            put item 1 of tLine into tRecordings[tLine]["question"]
+            put item 2 of tLine into tRecordings[tLine]["date"]
+         put item 3 of tLine into tRecordings[tLine]["time"]
+         put item 4 of tLine into tRecordings[tLine]["id"]
+         // put 1 into tLineNumber
+         // dispatch "AddData" to group "recordingsList" of card "practice" with tRecording, tLineNumber
+         end repeat
+      
+         set the dgData of group "recordingsList" of card "practice" to tRecordings
+         put empty into gRecordingsList
+      end if
+   */
+   
+   if the environment is "mobile" then
+      // mobileControlSet "recordingsScroller","visible", false
+      // mobileControlSet "avatarPlayer","visible", true
+   else
+      set the visible of group "video" to true
+      end if
+      // put "record" into gVideoFile
+      // put "alertloop" into gLoopFile
+      // put false into gLooping
+   playVideo
+end goToPractice
+
+on pickRandomQuestion
+   set itemDel to tab
+   put getDatabaseID() into tDatabaseID
+   put "SELECT id,header FROM content WHERE type = '31' OR type = '32' OR type = '33' OR type = '34'" into tSQL
+   put revDataFromQuery(tab,return,tDatabaseID,tSQL) into tList
+   put any line of tList into gPracticeQuestions
+end pickRandomQuestion
+
+on setupMiniInterview
+   set itemDel to tab
+   put getDatabaseID() into tDatabaseID
+   put "SELECT id,header FROM content WHERE type = '31' OR type = '32' OR type = '33' OR type = '34'" into tSQL
+   put revDataFromQuery(tab,return,tDatabaseID,tSQL) into tList
+   sort lines of tList by random(the number of lines of tList)
+   put line 1 to 3 of tList into gPracticeQuestions
+end setupMiniInterview
+
+on randomQuestion
+   set itemDel to tab
+   put item 2 of line 1 of gPracticeQuestions into field "prompt" of card "practice"
+end randomQuestion
+
+on firstQuestion
+   set itemDel to tab
+   put "Question 1 of 3:" && item 2 of line 1 of gPracticeQuestions into field "prompt" of card "practice"
+end firstQuestion
+
+on secondQuestion
+   if mergMicrophoneIsRecording() then
+      // deleteVideoPlayer
+   set itemDel to tab
+   put "Question 2 of 3:" && item 2 of line 2 of gPracticeQuestions into field "prompt" of card "practice"
+   put "clip" & item 1 of line 2 of gPracticeQuestions into gVideoFile
+   // put false into gLooping
+   playVideo
+   end if
+end secondQuestion
+
+on thirdQuestion
+   if mergMicrophoneIsRecording() then
+      // deleteVideoPlayer
+   set itemDel to tab
+   put "Question 3 of 3:" && item 2 of line 3 of gPracticeQuestions into field "prompt" of card "practice"
+   put "clip" & item 1 of line 3 of gPracticeQuestions into gVideoFile
+   // put false into gLooping
+   playVideo
+   end if
+end thirdQuestion
+
+on gettingImpatient
+   if mergMicrophoneIsRecording() then
+   put "boredloop" into gLoopFile
+   // put gLoopFile into gVideoFile
+   // put true into gLooping
+   playLoop
+   end if
+end gettingImpatient
+
+on goToPepTalk
+   // deleteVideoPlayer
+   set the visible of group "foylFrame" to true
+      set the visible of group "button1" to true
+   set the visible of group "button2" to true
+   set the visible of group "button3" to true
+   set the visible of group "button4" to true
+   set the visible of field "mainHeader" of card "main" to true
+   put "How are you feeling?" into field "mainHeader" of card "main"
+   put "Nervous" into field "button1"
+   put "Numb" into field "button2"
+   put "Pissed" into field "button3"
+   put "Pumped" into field "button4"
+   put "Back" into field "mgcLabel" of group "tableft" of card "main"
+   set the visible of group "tabright" to false
+   playVideo
+end goToPepTalk
+
+on goToSettings
+   lock screen for visual effect in rect (the rect of group "settings" of card "main")
+   
+   set the visible of group "settings" of card "main" to true
+   
+   unlock screen with visual effect "reveal up" very fast
+end goToSettings
+
+on playVideo
+  loadVideo
+      // if gVideoFile is not empty then
+      if the environment is "mobile" then
+         set the visible of group "video" to false
+         set the visible of player "player" to false
+         createVideoPlayer
+         mobileControlSet "avatarPlayer", "looping", false
+         mobileControlSet "avatarPlayer", "fileName", gVideo
+         // mobileControlSet "avatarPlayer", "visible", true
+         
+         send checkVideoLoad to me in 1000 milliseconds
+         
+         mobileControlDo "avatarPlayer","play"
+         
+         // send checkPlayerState to me in 3 seconds
+         
+      else
+      // set the filename of player "player" to empty
+      //set the visible of group "video" to true
+      // set the filename of player "player" to gVideo
+      // set the currentTime of player "player" to zero
+      // start player "player"
+   end if
+// end if
+end playVideo
+
+on playLoop
+   loadLoop
+   if the environment is "mobile" then
+         set the visible of group "video" to false
+         set the visible of player "player" to false
+         createVideoPlayer
+         mobileControlSet "avatarPlayer", "looping", true
+         mobileControlSet "avatarPlayer", "fileName", gVideo
+         
+         send checkVideoLoad to me in 1500 milliseconds
+         
+         mobileControlDo "avatarPlayer","play"
+         
+         // send checkPlayerState to me in 15 seconds
+      else
+      // set the filename of player "player" to empty
+      // set the visible of group "video" to true
+      // set the filename of player "player" to gVideo
+      // set the currentTime of player "player" to zero
+      // start player "player"
+   end if
+end playLoop
+
+on createVideoPlayer
+   mobileControlDelete "avatarPlayer"
+   mobileControlCreate "player", "avatarPlayer"
+   mobileControlSet "avatarPlayer", "rect", "0,44,640,404"
+   // mobileControlSet "avatarPlayer", "visible", true
+   mobileControlSet "avatarPlayer", "opaque", true
+   mobileControlSet "avatarPlayer", "showController", false
+   mobileControlSet "avatarPlayer", "preserveAspect", true
+   mobileControlSet "avatarPlayer", "alwaysBuffer", true
+end createVideoPlayer
+
+on checkVideoLoad
+   put mobileControlGet ("avatarPlayer","playbackState") into tState
+   if tState = "playing" then
+      // visual effect dissolve very fast
+      mobileControlSet "avatarPlayer", "visible", true
+      set the visible of group "foylFrame" to false
+      else
+         send checkVideoLoad to me in 50 milliseconds
+         end if
+end checkVideoLoad
+
+on checkPlayerState
+   put mobileControlGet ("avatarPlayer","playbackState") into tState
+      if tState = "playing" then
+         send checkPlayerState to me in 50 milliseconds
+      else
+         set the visible of group "foylFrame" to true
+         playLoop
+         end if
+end checkPlayerState
+
+/*
+on playerFinished
+         set the visible of group "foylFrame" to true
+         put gLoopFile into gVideoFile
+         playLoop
+end playerFinished
+*/
+
+on loadVideo
+   if gPlayAnimation is true then
+   // if gVideoFile is not empty then
+           if the environment is "mobile" then
+         put specialFolderPath("engine") & slash & "Video" & slash & gVideoFile & ".mp4" into gVideo
+         else
+           put specialFolderPath("documents") & "/Foyl/Videos/" & gVideoFile & ".mp4" into gVideo
+        end if
+        // end if
+     else
+        // if gVideoFile is not empty then
+        if the environment is "mobile" then
+         put specialFolderPath("engine") & "/Video/naploop.mp4" into gVideo
+         else
+           put specialFolderPath("documents") & "/Foyl/Videos/naploop.mp4" into gVideo
+        // end if
+        end if
+          end if
+end loadVideo
+
+on loadLoop
+   if gPlayAnimation is true then
+           if the environment is "mobile" then
+         put specialFolderPath("engine") & slash & "Video" & slash & gLoopFile & ".mp4" into gVideo
+         else
+           put specialFolderPath("documents") & "/Foyl/Videos/" & gLoopFile & ".mp4" into gVideo
+        end if
+     else
+        if the environment is "mobile" then
+         put specialFolderPath("engine") & "/Video/naploop.mp4" into gVideo
+         else
+           put specialFolderPath("documents") & "/Foyl/Videos/naploop.mp4" into gVideo
+         end if
+          end if
+end loadLoop
+
+on playAudio
+   if the environment is "mobile" then
+      mobileControlCreate "player", "audioPlayer"
+      mobileControlSet "audioPlayer", "visible", false
+      mobileControlSet "audioPlayer", "fileName", gRecording
+      put mobileControlGet("audioPlayer","playableDuration") into gDuration
+      answer gDuration
+      mobileControlDo "audioPlayer", "play"
+      send "showAudioProgress" to me in 50 milliseconds
+   else
+      play gRecording
+      end if
+end playAudio
+
+on deleteVideoPlayer
+   if the environment is "mobile" then
+   // if mobileControlTarget() is "avatarPlayer" then
+      mobileControlDelete "avatarPlayer"
+      end if
+end deleteVideoPlayer
+
+on resetVideo
+   if the environment is "mobile" then
+      // mobileControlDo "avatarPlayer","stop"
+   else
+      stop player "player"
+      end if
+end resetVideo
+
+a
+      set the backgroundColor of group "button1" to "#5A769B"
+      set the backgroundColor of group "button2" to "#A49183"
+      set the backgroundColor of group "button3" to "#B5774E"
+      set the backgroundColor of group "button4" to "#A24E4C"
+end setButtonColors
+
+on goToExtras
+   deleteVideoPlayer
+   go to card "main"
+   set the visible of group "foylFrame" to true
+   showNavButtons
+   put "Settings" into field "button3"
+   put "About" into field "button1"
+   put "Resources" into field "button2"
+   // put "More Free Stuff" into field "button4"
+   set the visible of group "button4" of card "main" to false
+   set the visible of group "settings" to false
+   set the visible of group "share" of card "main" to false
+   set the visible of field "mainHeader" of card "main" to false
+   set the visible of group "border" of card "main" to true
+   set the mgText of group "tableft" of card "main" to "Main"
+   // put "Main" into field "mgcLabel" of group "tableft"
+   set the visible of group "tabright" to false
+   put gLoopFile into gVideoFile
+   put true into gLooping
+   playVideo
+end goToExtras
+
+on goToAbout
+  
+      // put empty into gVideoFile      
+
+ go to card "about"      
+
+
+ if the environment is "mobile" then
+ mobileControlDelete "resourceBrowser"
+      end if
+      
+      
+      // hideNavButtons
+      set the visible of group "button1" to false
+      set the visible of group "button2" to false
+      set the visible of group "button3" to false
+      set the visible of group "button4" to true
+      
+   set the visible of group "share" of card "main" to false
+   put "Extras" into field "mgcLabel" of group "tableft" of card "main"
+   set the visible of group "tabright" to false
+   put "Email Dr. Sean" into field "button4"
+   
+   set the backgroundColor of field "foilQuote" of card "about" to "#5A769B"
+   set the backgroundColor of group "button4" to "#A24E4C"
+   set the textColor of field "foilQuote" of card "about" to white
+   
+   set the htmlText of field "copyright" of card "about" to "&copy; 2016 Sean Miller"
+   
+   set the htmlText of field "foilQuote" of card "about" to "<p>His Friends observe these little Singularities as Foils that rather set off than blemish his good Qualities.     <br />&#8211; Joseph Addison, <i>The Spectator</i> (1711)</p>"
+   
+   set the htmlText of field "ivyleagueedgeText" of card "about" to "<p><b>Foyl is brought to you by the folks at Readerly.</b></p><br /><p>At Readerly, we believe the best way to get into your first-choice college&mdash;and succeed academically when you get there&mdash;is to start doing college-level work <i>while you’re still in high school</i>.</p><br /><p>We also believe that strong reading and writing skills are the foundation on which all academic success is built. When you work with us, our goal is to leverage your natural curiosity about the world to develop reading and writing habits that are <i>intellectually rigorous</i>.</p><br /><p>Intellectual rigor, which we discuss in depth on the Readerly website, is what college professors look for in their students. It’s the secret sauce to all academic success in college&mdash;and beyond.</p>"
+   
+   set the htmlText of field "foylText" of card "about" to "<b>Foyl Banovac</b>, MEd, is the former Dean of Admission at St. Marten&#8217;s College in Pine Bluff, Oregon. He&#8217;s famous in Pine Bluff for his annual &#8220;taiga&#8221; party."
+   
+   set the htmlText of field "signupText" of card "about" to "<p align=center>Tap <b>here</b> to try <b>Readerly beta</b> and get free lifetime access to all <b>Readerly</b> content.</p>"
+   
+   set the htmlText of field "drseanText" of card "about" to "<p><b>Dr. Sean</b> has a decade of teaching experience at universities in the US and Asia. He earned a BA with honors from Columbia University and a PhD from the University of London. Dr. Sean is also an award-winning scholar who published a book on string theory with the University of Michigan Press.</p>"
+   /*
+   if the environment is "mobile" then
+      mobileControlCreate "browser", "aboutBrowser"
+      mobileControlSet "aboutBrowser", "rect", "0,0,640,1092"
+      mobileControlSet "aboutBrowser", "visibility", true
+      mobileControlSet "aboutBrowser", "scrollingEnabled", true
+      mobileControlSet "aboutBrowser", "canBounce", true
+      put specialFolderPath("engine") & slash & "about.html" into tURL
+      mobileControlSet "aboutBrowser", "URL", tURL      
+   else
+      
+   end if
+   */
+   focus on nothing
+end goToAbout
+
+on goToResources
+   put empty into gVideoFile
+   go to card "browser"
+   
+   if the environment is "mobile" then
+      mobileControlSet "avatarPlayer", "visible", false
+      mobileControlDelete "resourceBrowser"
+      // mobileControlDelete "avatarPlayer"
+   else
+      set the vScrollbar of group "itemTextGroup" of card "item" to false
+      end if
+   
+   hideNavButtons
+   set the visible of group "video" to false
+   set the visible of group "tabcenter" to true
+   put "Extras" into field "mgcLabel" of group "tableft"
+   put "resources" into gCard
+   
+   set the htmlText of field "link1" of card "browser" to "<h3>Readerly</h3><p><font color=#b2b2b2>http://info.readerlyapp.com/</font></p><p>Resources to help you develop the one skill that correlates most strongly with academic success in college&mdash;<i>intellectual rigor</i>.</p>"
+   
+   set the htmlText of field "link2" of card "browser" to "<h3>Big Future&mdash;The College Board</h3><p><font color=#b2b2b2>https://bigfuture.collegeboard.org/</font></p><p>College planning tips from the makers of the SAT.</p>"
+   
+   set the htmlText of field "link3" of card "browser" to "<h3>College Confidential</h3><p><font color=#b2b2b2>http://www.collegeconfidential.com/</font></p><p>A well-trafficked online forum for any questions you have about college.</p>"
+   
+   set the htmlText of field "link4" of card "browser" to "<h3>The Chronicle of Higher Education</h3><p><font color=#b2b2b2>http://chronicle.com/</font></p><p>The journal of record for higher education in America. A great source for insights into the concerns of university faculty and administrators.</p>"
+   
+   set the htmlText of field "link5" of card "browser" to "<h3>Inside Higher Ed</h3><p><font color=#b2b2b2>https://www.insidehighered.com/</font></p><p>Another important source for news on higher education in the US. A bit more radical than the Chronicle.</p>"
+   
+   set the htmlText of field "link6" of card "browser" to "<h3>College Factual</h3><p><font color=#b2b2b2>http://www.collegefactual.com/</font></p><p>An innovative data-driven tool for finding the right colleges and majors for you.</p>"
+   
+   set the htmlText of field "link7" of card "browser" to "<h3>Huffington Post College Prep</h3><p><font color=#b2b2b2>http://www.huffingtonpost.com/news/college-prep/</font></p><p>A wide range of timely perspectives on college admission.</p>"
+   
+   set the htmlText of field "link8" of card "browser" to "<h3>Her Campus</h3><p><font color=#b2b2b2>http://www.hercampus.com/</font></p><p>A global community for college women, providing news and advice, written entirely by student journalists.</p>"
+   
+   repeat with x = 1 to 8
+      set the textSize of line 1 of field ("link" & x) to 22
+      set the textSize of line 2 of field ("link" & x) to 18
+   end repeat
+   
+end goToResources
+
+on goToBrowser
+   put empty into gVideoFile
+   deleteVideoPlayer
+   hideNavButtons
+   set the visible of group "video" to false
+   set the visible of player "player" to false
+   go to card "browser"
+   setToMain
+end goToBrowser
+
+on goToLink
+   if the environment is "mobile" then
+   go to card "web"
+   hideNavButtons
+   set the visible of group "tabright" to false
+   // set the visible of group "tabcenter" to false
+   put "Back" into field "mgcLabel" of group "tableft"
+   mobileControlCreate "browser", "resourceBrowser"
+   mobileControlSet "resourceBrowser", "visible", true
+   mobileControlSet "resourceBrowser", "rect", "0,44,640,1092"
+   mobileControlSet "resourceBrowser", "scrollingEnabled", true
+   mobileControlSet "resourceBrowser", "canBounce", true
+   mobileControlSet "resourceBrowser", "URL", gLink
+else
+   launch url gLink
+   end if
+end goToLink
+
+on saveNote
+   put the mgText of group "itemNote" of card "item" into tItemNote
+   put specialFolderPath("documents") & "/note" & gItemID & ".txt" into tFile
+   put tItemNote into URL("file:" & tFile)
+end saveNote
+
+on loadNote
+   put specialFolderPath("documents") & "/note" & gItemID & ".txt" into tFile
+   put URL("file:" & tFile) into tItemNote
+   set the mgText of group "itemNote" of card "item" to tItemNote
+end loadNote
+
+function getUUID
+   
+   put "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" into tUUIDpattern
+   put "1234567890abcdefghigklmnopqustuvwxyzABCDEFGHIJKLMNOPURSTUVWXYZ" into tHexDigits
+   repeat for each char tChar in tUUIDpattern
+      put any char of tHexDigits after tUUID
+   end repeat
+   
+   return tUUID
+   
+end getUUID
+
+on generateSessionID
+   put date() into tDate
+   replace slash with "" in tDate
+   put time() into tTime
+   replace colon with "" in tTime
+   replace space with "" in tTime
+   put getUUID() & tDate & tTime into gSessionID
+end generateSessionID
+
+on logUserAction
+   set itemDel to tab
+   put date() && the long time & tab after gSessionLog
+   put gUserAction & return after gSessionLog
+end logUserAction
+
+on firstTimeWarning
+   if mergMicrophoneIsRecording() then
+      put "15 seconds left" into field "prompt" of card "practice"
+      // beep
+      end if
+end firstTimeWarning
+
+on lastTimeWarning
+   if mergMicrophoneIsRecording() then
+      put "Time to wrap it up!" into field "prompt" of card "practice"
+      // beep 3
+      end if
+end lastTimeWarning
+
+on showRecordingLevel
+   set the mgMax of group "recordingLevel" of card "practice" to 100
+   if mergMicrophoneIsRecording() then
+      set the mgValue of group "recordingLevel" of card "practice" to percentMax(mergMicrophoneAveragePower())
+      send showRecordingLevel to me in 50 milliseconds
+   end if
+end showRecordingLevel
+
+on checkAudioStatus
+   if mobileSoundChannelStatus() = "playing" or "paused" then
+      send checkAudioStatus to me in 100 milliseconds
+      else
+      if field "mgcLabel" of group "tabright" = "Close" then
+      put "Delete" into field "button3"
+      else
+      set the visible of group "button3" to false
+   end if
+      end if
+end checkAudioStatus
+
+on showAudioProgress
+   // if mobileControlTarget() is "audioPlayer" then
+   // put mobileControlGet("audioPlayer", "duration") into tEndTime
+      set the mgMin of group "recordingLevel" of card "practice" to 0
+      set the mgMax of group "recordingLevel" of card "practice" to gDuration
+      put mobileControlGet("audioPlayer", "currentTime") into tProgress
+      set the mgValue of group "recordingLevel" of card "practice" to tProgress
+      put the mgMin of group "recordingLevel" of card "practice" into tStartTime
+      put tStartTime into field "Field1" of card "practice"
+      put tProgress into field "Field2" of card "practice"
+      put gDuration into field "Field3" of card "practice"
+      // send "showAudioProgress" to me in 50 milliseconds
+      // end if
+end showAudioProgress
+
+-- pDecibels is between -160 and 0
+function percentMax pDecibels
+   -- ignore bottom -100 to -160 as it's dead quiet and probably won't happen much
+   return max(100+pDecibels,0)
+end percentMax
+
+on goToSignup
+   go to card "signup"
+   deleteVideoPlayer
+hideNavButtons
+// set the visible of group "button5" of card "signup" to true
+// set the visible of group "button6" of card "signup" to true
+   // put empty into field "button3"
+   put "first name" into field "firstName" of card "signup"
+   put "email" into field "email" of card "signup"
+   put "Sign Me Up!" into field "button6" of card "signup"
+   // set the visible of field "firstName" of card "signup" to true
+   // set the visible of field "email" of card "signup" to true
+   set the visible of group "share" of card "main" to false
+   put "Extras" into field "mgcLabel" of group "tableft" of card "main"
+   set the visible of group "tabright" to false
+   
+   set the htmlText of field "readerly" of card "signup" to "<font color='#f6921e'>R</font><font color='#4c4c4c'>eaderly</font>"
+   
+   set the htmlText of field "signupText2" of card "signup" to "<p><b>Readerly</b> is an app that hones your critical reading skills with interactive gameplay.</p><br /><p>Think of <b>Readerly</b> as a cross between an Oxford-style tutorial and a <i>Choose Your Own Adventure</i> game. First, you choose a <b>Readerly Topic</b>, for example, <i>Who Killed Junior Seau?</i>, <i>Cyborg Vampires Attack!</i>, or <i>Food, Glorious Food</i>. Once you’ve picked a topic, you read a series of short reading passages that become increasingly difficult. You answer questions about each passage that test basic comprehension then build to more challenging ones. By answering questions correctly, you earn points. Earn enough points and you advance levels&mdash;from Rookie to Reader to Scholar, and eventually, to Sage.</p><br /></p>Like a good tutor, <b>Readerly</b> adapts the questions it presents you based on your responses, guiding you to a deeper understanding of the reading passage and the topic as a whole. By playing <b>Readerly</b> on an iPhone, iPad, or Android device for short bursts every day for a few months, you’ll:</p><br /><ul><li>get more out of your reading</li><li>explore interesting, new topics in depth</li><li>build your intellectual confidence<li>improve your scores on standardized exams like the SAT and ACT.</li></ul><br /><h2>Sign up now to try Readerly beta and get free lifetime access to all Readerly content.</h2>"
+   
+   focus on nothing
+   
+end goToSignup
+
+on listSignup
+   if field "firstName" of card "signup" is empty then
+      answer "Please include your first name."
+      exit listSignup
+   end if
+   if field "email" of card "signup" is empty then
+      answer "Please enter a valid email address."
+      exit listSignup
+   end if
+   
+   put urlEncode(field "firstName" of card "signup") into tName
+   put field "email" card "signup" into tEmail
+   
+   if matchText(tEmail,"^[A-z0-9_\-\.]+[@][A-z0-9_\-]+([.][A-z0-9_\-]+)+[A-z]$") then
+      
+      put "Contacting the mothership..." into field "button6" of card "signup"
+      
+      put urlEncode(field "email" of card "signup") into tEmail   
+      put URL "http://info.readerlyapp.com/welcome/" into tPage
+   put lineOffset("_mc4wp_form_nonce",tPage) into tLine
+   put line tLine of tPage into tString
+   put offset("nonce",tString) into tFirstChar
+   put character (tFirstChar + 14) to (tFirstChar + 23) of tString into tID
+   put lineOffset("_mc4wp_timestamp",tPage) into tLine
+   put line tLine of tPage into tString
+   put offset("timestamp",tString) into tFirstChar
+   put character (tFirstChar + 18) to (tFirstChar + 27) of tString into tTimeStamp
+   put "FNAME=" & tName & "&EMAIL=" & tEmail & "&_mc4wp_required_but_not_really=" & space & "&_mc4wp_timestamp=" & tTimeStamp & "&_mc4wp_form_submit=1&_mc4wp_form_instance=1&_mc4wp_form_nonce=" & tID into tArgList
+   post tArgList to URL "http://info.readerlyapp.com/welcome/"
+   put it into tResults
+   put lineOffset(" mc4wp-",tResults) into tLine
+   put line tLine of tResults into tString
+   put offset("alert",tString) into tFirstChar
+   put character (tFirstChar + 12) of tString into tStatus
+   if tStatus = "s" then
+      // set the textSize of field "button4" to 18
+      put "Success! Please check your email inbox." into field "button6" of card "signup"
+      send signupReset to group "button6" of card "signup" in 5 seconds
+   else
+      put "An error occured. Please try again." into field "button6" of card "signup"
+      send signupButtonReset to group "button6" of card "signup" in 5 seconds
+      end if
+else
+   answer "Please enter a valid email address."
+end if
+end listSignup
+
+on signupReset
+   put "Sign Me Up!" into field "button6" of card "signup"
+   put "first name" into field "firstName" of card "signup"
+   put "email" into field "email" of card "signup"
+end signupReset
+
+on signupButtonReset
+   put "Sign Me Up!" into field "button6" of card "signup"
+end signupButtonReset
+
+on setButtonColors
+      set the backgroundColor of group "button1" to "#5A769B"
+      set the backgroundColor of group "button2" to "#A49183"
+      set the backgroundColor of group "button3" to "#B5774E"
+      set the backgroundColor of group "button4" to "#A24E4C"
+end setButtonColors
+
+/* don't need these handler any more -- using AddLine and DeleteLine for data grid
+
+on loadRecordingsList
+  
+  set itemDel to tab
+  put field "recordingsData" of card "practice" into tList
+            
+         repeat for each line tLine in tList
+            put item 1 of tLine into tRecordings[tLine]["question"]
+            put item 2 of tLine into tRecordings[tLine]["date"]
+         put item 3 of tLine into tRecordings[tLine]["time"]
+         put item 4 of tLine into tRecordings[tLine]["id"]
+         end repeat
+         
+      set the dgData of group "recordingsList" of card "practice" to tRecordings
+end loadRecordingsList
+
+on recordingTick
+   put "." after field "button1"
+end recordingTick
+
+on recordingTickReset
+   put "Recording" into field "button1"
+end recordingTickReset
+*/
